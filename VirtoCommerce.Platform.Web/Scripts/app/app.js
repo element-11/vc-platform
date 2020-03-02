@@ -1,4 +1,4 @@
-﻿var AppDependencies = [
+var AppDependencies = [
     'ui.router',
     'luegg.directives',
     'googlechart',
@@ -23,7 +23,8 @@
     'ngTagsInput',
     'tmh.dynamicLocale',
     'pascalprecht.translate',
-    'angular.filter'
+    'angular.filter',
+    'LocalStorageModule'
 ];
 
 angular.module('platformWebApp', AppDependencies).
@@ -143,32 +144,65 @@ angular.module('platformWebApp', AppDependencies).
                 $state.go('workspace.appLicense');
             };
 
+            $scope.showVersionInfo = function () {
+                $state.go('workspace.systemInfo');
+            };
+
         }])
     // Specify SignalR server URL (application URL)
     .factory('platformWebApp.signalRServerName', ['$location', function ($location) {
         var retVal = $location.url() ? $location.absUrl().slice(0, -$location.url().length - 1) : $location.absUrl();
         return retVal;
     }])
-    .factory('platformWebApp.httpErrorInterceptor', ['$q', '$rootScope', function ($q, $rootScope) {
+    .factory('platformWebApp.httpErrorInterceptor', ['$q', '$rootScope', '$injector', 'platformWebApp.authDataStorage', function ($q, $rootScope, $injector, authDataStorage) {
         var httpErrorInterceptor = {};
 
         httpErrorInterceptor.request = function (config) {
-            // do something on success
-            if (!config.cache) {
-                $rootScope.$broadcast('httpRequestSuccess', config);
-            }
-            return config;
+            // Need to pass localization request despite on the auth state
+            if (config.url == 'api/platform/localization') {
+                return config;
+            }                        
+
+            config.headers = config.headers || {};
+
+            return extractAuthData()
+                .then(function (authData) {
+                    if (authData) {
+                        config.headers.Authorization = 'Bearer ' + authData.token;
+                    }
+
+                    return config;
+                }).finally(function () {
+                    // do something on success
+                    if (!config.cache) {
+                        $rootScope.$broadcast('httpRequestSuccess', config);
+                    }
+                });
         };
+
+        function extractAuthData() {
+            var authData = authDataStorage.getStoredData();
+            if (!authData) {
+                return $q.resolve();
+            }
+
+            if (Date.now() < authData.expiresAt) {
+                return $q.resolve(authData);
+            }
+
+            var authService = $injector.get('platformWebApp.authService');
+            return authService.refreshToken();
+        }
 
         httpErrorInterceptor.responseError = function (rejection) {
             if (rejection.status === 401) {
                 $rootScope.$broadcast('unauthorized', rejection);
-            }
-            else {
+            } else {
                 $rootScope.$broadcast('httpError', rejection);
             }
             return $q.reject(rejection);
         };
+
         httpErrorInterceptor.requestError = function (rejection) {
             $rootScope.$broadcast('httpError', rejection);
             return $q.reject(rejection);
@@ -186,6 +220,34 @@ angular.module('platformWebApp', AppDependencies).
             return $q.when({});
         };
     })
+    .factory('fileUploaderOptions', function () {
+        // do not add dynamic headers here, as the service is initialized once and no updates will be made
+        return {
+            url: '/',
+            alias: 'file',
+            queue: [],
+            progress: 0,
+            autoUpload: false,
+            removeAfterUpload: false,
+            method: 'POST',
+            filters: [],
+            formData: [],
+            queueLimit: Number.MAX_VALUE,
+            withCredentials: false
+        };
+    })
+    .config(['$provide', function ($provide) {
+        $provide.decorator('FileUploader', ['$delegate', 'platformWebApp.authDataStorage', function (FileUploader, authDataStorage) {
+            // inject auth header for all FileUploader instance
+            FileUploader.prototype._onAfterAddingFile = function (item) {
+                var authData = authDataStorage.getStoredData();
+                var authHeaders = authData ? { Authorization: 'Bearer ' + authData.token } : {};
+                item.headers = angular.extend({}, item.headers, authHeaders);
+                FileUploader.prototype.onAfterAddingFile(item);
+            }
+            return FileUploader;
+        }])
+    }])
     .config(['$stateProvider', '$httpProvider', 'uiSelectConfig', 'datepickerConfig', 'datepickerPopupConfig', 'tagsInputConfigProvider', '$compileProvider',
         function ($stateProvider, $httpProvider, uiSelectConfig, datepickerConfig, datepickerPopupConfig, tagsInputConfigProvider, $compileProvider) {
 
@@ -292,11 +354,23 @@ angular.module('platformWebApp', AppDependencies).
                 //timeout need because $state not fully loading in run method and need to wait little time
                 $timeout(function () {
                     if (authContext.isAuthenticated) {
-                        if (!$state.current.name || $state.current.name === 'loginDialog') {
+                        var currentState = $state.current;
+                        if (authContext.passwordExpired) {
+                            $state.go('changePasswordDialog', {
+                                onClose: function () {
+                                    if (!currentState.abstract
+                                        && currentState.name !== 'loginDialog'
+                                        && currentState.name !== 'changePasswordDialog') {
+                                        $state.go(currentState);
+                                    } else {
+                                        $state.go('workspace');
+                                    }
+                                }
+                            });
+                        } else if (!currentState.name || currentState.name === 'loginDialog') {
                             $state.go('workspace');
                         }
-                    }
-                    else {
+                    } else {
                         $state.go('loginDialog');
                     }
                 }, 500);

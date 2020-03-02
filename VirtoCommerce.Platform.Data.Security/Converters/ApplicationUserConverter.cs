@@ -1,10 +1,9 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.AspNet.Identity.EntityFramework;
 using Omu.ValueInjecter;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.Platform.Core.Security;
-using VirtoCommerce.Platform.Data.Common.ConventionInjections;
 using VirtoCommerce.Platform.Data.Model;
 using VirtoCommerce.Platform.Data.Security.Identity;
 
@@ -29,6 +28,7 @@ namespace VirtoCommerce.Platform.Data.Security.Converters
             retVal.Roles = dbEntity.RoleAssignments.Select(x => x.Role.ToCoreModel(scopeService)).ToArray();
             retVal.Permissions = retVal.Roles.SelectMany(x => x.Permissions).SelectMany(x => x.GetPermissionWithScopeCombinationNames()).Distinct().ToArray();
             retVal.ApiAccounts = dbEntity.ApiAccounts.Select(x => x.ToCoreModel()).ToArray();
+
 
             return retVal;
         }
@@ -65,6 +65,7 @@ namespace VirtoCommerce.Platform.Data.Security.Converters
             target.IsAdministrator = source.IsAdministrator;
             target.UserName = source.UserName;
             target.MemberId = source.MemberId;
+            target.PasswordExpired = source.PasswordExpired;
 
             if (!source.ApiAccounts.IsNullCollection())
             {
@@ -92,7 +93,7 @@ namespace VirtoCommerce.Platform.Data.Security.Converters
             dbUser.AccessFailedCount = user.AccessFailedCount;
             dbUser.EmailConfirmed = user.EmailConfirmed;
             dbUser.Email = user.Email ?? dbUser.Email;
-            
+
             // Copy logins
             if (user.Logins != null)
             {

@@ -40,8 +40,8 @@
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -100,6 +100,7 @@
     <Compile Include="Events\ChangedEntryEvent.cs" />
     <Compile Include="Events\DomainEvent.cs" />
     <Compile Include="Events\EventPublisher.cs" />
+    <Compile Include="Events\EventSupressor.cs" />
     <Compile Include="Events\ICancellableEventHandler.cs" />
     <Compile Include="Events\IChangedEntryEvent.cs" />
     <Compile Include="Events\IEvent.cs" />
@@ -187,6 +188,17 @@
     <Compile Include="Modularity\ModuleState.cs" />
     <Compile Include="Modularity\Exceptions\ModuleTypeLoaderNotFoundException.cs" />
     <Compile Include="Modularity\Exceptions\ModuleTypeLoadingException.cs" />
+    <Compile Include="NitoAsyncEx\AsyncLock.cs" />
+    <Compile Include="NitoAsyncEx\AsyncWaitQueue.cs" />
+    <Compile Include="NitoAsyncEx\AwaitableDisposable.cs" />
+    <Compile Include="NitoAsyncEx\Collections\CollectionHelpers.cs" />
+    <Compile Include="NitoAsyncEx\Collections\Deque.cs" />
+    <Compile Include="NitoAsyncEx\Disposables\Internals\BoundAction.cs" />
+    <Compile Include="NitoAsyncEx\ExceptionHelpers.cs" />
+    <Compile Include="NitoAsyncEx\IdManager.cs" />
+    <Compile Include="NitoAsyncEx\Disposables\SingleDisposable.cs" />
+    <Compile Include="NitoAsyncEx\TaskCompletionSourceExtensions.cs" />
+    <Compile Include="NitoAsyncEx\TaskExtensions.cs" />
     <Compile Include="Notifications\EmailNotification.cs" />
     <Compile Include="Notifications\IEmailNotificationSendingGateway.cs" />
     <Compile Include="Notifications\INotificationManager.cs" />
@@ -227,8 +239,12 @@
     <Compile Include="Security\Events\UserLoginEvent.cs" />
     <Compile Include="Security\ICurrentUser.cs" />
     <Compile Include="Security\IHasSecurityAccounts.cs" />
+    <Compile Include="Security\IPasswordCheckService.cs" />
+    <Compile Include="Security\IRefreshTokenService.cs" />
     <Compile Include="Security\ISupportSecurityScopes.cs" />
     <Compile Include="Security\IUserNameResolver.cs" />
+    <Compile Include="Security\PasswordValidationResult.cs" />
+    <Compile Include="Security\RefreshToken.cs" />
     <Compile Include="Security\VirtoCommerceClaimTypes.cs" />
     <Compile Include="Security\IPermissionScopeService.cs" />
     <Compile Include="Security\IRoleManagementService.cs" />
@@ -270,9 +286,7 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
+    <None Include="packages.config" />
     <None Include="VirtoCommerce.Platform.Core.nuspec">
       <SubType>Designer</SubType>
     </None>
@@ -282,6 +296,7 @@
       <Link>CustomDictionary.xml</Link>
     </CodeAnalysisDictionary>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
